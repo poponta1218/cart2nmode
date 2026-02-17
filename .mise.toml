@@ -1,0 +1,3 @@
+# vim: set ft=toml:
+[tools]
+  "aqua:astral-sh/uv" = "latest"

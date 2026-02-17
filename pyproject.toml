@@ -1,0 +1,19 @@
+[project]
+name = "cart2nmode"
+version = "0.1.0"
+description = "A Python tool for converting Cartesian coordinates to normal mode coordinates."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.4.2",
+    "pint>=0.25.2",
+    "polars>=1.38.1",
+    "pydantic>=2.12.5",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "ruff>=0.15.1",
+]
