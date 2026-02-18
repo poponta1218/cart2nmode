@@ -5,7 +5,9 @@ description = "A Python tool for converting Cartesian coordinates to normal mode
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "cclib>=1.8.1",
     "numpy>=2.4.2",
+    "openbabel-wheel>=3.1.1.23",
     "pint>=0.25.2",
     "polars>=1.38.1",
     "pydantic>=2.12.5",
