@@ -2,12 +2,24 @@
 #    uv export --format requirements-txt --no-hashes --no-dev
 annotated-types==0.7.0
     # via pydantic
+cclib==1.8.1
+    # via cart2nmode
 flexcache==0.3
     # via pint
 flexparser==0.4
     # via pint
 numpy==2.4.2
+    # via
+    #   cart2nmode
+    #   cclib
+    #   periodictable
+    #   scipy
+openbabel-wheel==3.1.1.23
     # via cart2nmode
+packaging==26.0
+    # via cclib
+periodictable==2.0.2
+    # via cclib
 pint==0.25.2
     # via cart2nmode
 platformdirs==4.9.2
@@ -20,6 +32,10 @@ pydantic==2.12.5
     # via cart2nmode
 pydantic-core==2.41.5
     # via pydantic
+pyparsing==3.3.2
+    # via periodictable
+scipy==1.17.0
+    # via cclib
 typing-extensions==4.15.0
     # via
     #   flexcache
