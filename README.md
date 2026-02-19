@@ -116,34 +116,34 @@ To isolate internal vibrational motions, the snapshot structure is aligned to th
 Let matrices $`X_{\text{snap}}`$ and $`X_{\text{ref}}`$ be the centered, $`N \times 3`$ coordinates of the snapshot and reference structures, respectively.  
 The optimal rotation matrix $`R`$ is derived via SVD:
 
-1. **Compute the Mass-Weighted Covariance Matrix $C$**:
+**1. Compute the Mass-Weighted Covariance Matrix $C$**:
 
-    $$
-    C = {X_{\text{snap}}}^\mathsf{T} W X_{\text{ref}}
-    $$
+```math
+C = {X_{\text{snap}}}^\mathsf{T} W X_{\text{ref}}
+```
 
-    where $`W`$ is the diagonal matrix of atomic masses ($`N \times N`$).
+where $`W`$ is the diagonal matrix of atomic masses ($`N \times N`$).
 
-2. **Singular Value Decomposition (SVD)**:
-    Decompose $`C`$ into unitary matrices $`U`$ and $`V^\mathsf{T}`$:
+**2. Singular Value Decomposition (SVD)**:
+Decompose $`C`$ into unitary matrices $`U`$ and $`V^\mathsf{T}`$:
 
-    $$
-    C = U \Sigma V^\mathsf{T}
-    $$
+```math
+C = U \Sigma V^\mathsf{T}
+```
 
-3. **Compute Rotation Matrix $`R`$**:
+**3. Compute Rotation Matrix $`R`$**:
 
-    $$
-    R = V U^\mathsf{T}
-    $$
+```math
+R = V U^\mathsf{T}
+```
 
-    (*Determinant check and reflection correction are applied as necessary.*)
+(*Determinant check and reflection correction are applied as necessary.*)
 
-4. **Apply Rotation and Compute Displacement**:
+**4. Apply Rotation and Compute Displacement**:
 
-    $$
-    X_{\text{snap}}^{\text{aligned}} = X_{\text{snap}} R
-    $$
+```math
+X_{\text{snap}}^{\text{aligned}} = X_{\text{snap}} R
+```
 
 ### Normal Mode Projection
 
@@ -164,12 +164,12 @@ where:
 > [!NOTE]
 > The mass-weighted displacement vector $`\mathbf{\mathit{q}}`$ can be reconstructed from the normal mode coordinates $`Q_i`$:
 >
-> $$
+> ```math
 > \begin{align*}
 >     \mathbf{\mathit{q}} & = LQ \\
 >         & = \sum_{i} Q_i \mathbf{l}_i
 > \end{align*}
-> $$
+> ```
 >
 > where $`\mathbf{\mathit{q}} = M^{\frac{1}{2}} (\mathbf{\mathit{x}}_{\text{snap}}^{\text{aligned}} - \mathbf{\mathit{x}}_{\text{ref}})`$.
 
