@@ -337,10 +337,10 @@ class Projector:
         weights = self.ref.masses
         cov_mat = (curr_centered.T * weights.magnitude) @ self.ref_centered
         U, _S, V_t = np.linalg.svd(cov_mat)  # noqa: N806
-        rot_mat = V_t.T @ U.T
+        rot_mat = U @ V_t
         if np.linalg.det(rot_mat) < 0:
             V_t[-1, :] *= -1
-            rot_mat = V_t.T @ U.T
+            rot_mat = U @ V_t
 
         curr_aligned = curr_centered @ rot_mat
 

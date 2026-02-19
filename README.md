@@ -134,7 +134,7 @@ C = U \Sigma V^\mathsf{T}
 **3. Compute Rotation Matrix $`R`$**:
 
 ```math
-R = V U^\mathsf{T}
+R = U V^\mathsf{T}
 ```
 
 (*Determinant check and reflection correction are applied as necessary.*)
