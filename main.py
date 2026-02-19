@@ -360,7 +360,7 @@ class Projector:
             logger.warning(wmsg)
             warnings.warn(wmsg, UserWarning, stacklevel=2)
 
-        mass_mat = np.repeat(self.ref.masses.magnitude, 3)
+        mass_mat = np.repeat(weights.magnitude, 3)
         nmode_mw_coefs = diff.flatten() * np.sqrt(mass_mat)
 
         nmode = self.ref.eigenvectors
