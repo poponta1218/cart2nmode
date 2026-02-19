@@ -113,37 +113,37 @@ The projection workflow consists of two main steps: Structural Alignment and Nor
 
 To isolate internal vibrational motions, the snapshot structure is aligned to the reference structure by minimizing the Mass-Weighted RMSD.
 
-Let matrices $`X_{\text{snap}}`$ and $`X_{\text{ref}}`$ be the centered, $N \times 3$ coordinates of the snapshot and reference structures, respectively.  
-The optimal rotation matrix $\mathbf{R}$ is derived via SVD:
+Let matrices $`X_{\text{snap}}`$ and $`X_{\text{ref}}`$ be the centered, $`N \times 3`$ coordinates of the snapshot and reference structures, respectively.  
+The optimal rotation matrix $`R`$ is derived via SVD:
 
 1. **Compute the Mass-Weighted Covariance Matrix $C$**:
 
-    ```math
+    $$
     C = {X_{\text{snap}}}^\mathsf{T} W X_{\text{ref}}
-    ```
+    $$
 
     where $`W`$ is the diagonal matrix of atomic masses ($`N \times N`$).
 
-1. **Singular Value Decomposition (SVD)**:
+2. **Singular Value Decomposition (SVD)**:
     Decompose $`C`$ into unitary matrices $`U`$ and $`V^\mathsf{T}`$:
 
-    ```math
+    $$
     C = U \Sigma V^\mathsf{T}
-    ```
+    $$
 
-1. **Compute Rotation Matrix $`R`$**:
+3. **Compute Rotation Matrix $`R`$**:
 
-    ```math
+    $$
     R = V U^\mathsf{T}
-    ```
+    $$
 
     (*Determinant check and reflection correction are applied as necessary.*)
 
-1. **Apply Rotation and Compute Displacement**:
+4. **Apply Rotation and Compute Displacement**:
 
-    ```math
+    $$
     X_{\text{snap}}^{\text{aligned}} = X_{\text{snap}} R
-    ```
+    $$
 
 ### Normal Mode Projection
 
@@ -151,27 +151,27 @@ After alignment, the coordinates are flattened into vectors ($`3N`$-dimensional)
 The projection coordinate $`Q_i`$ for the $`i`$-th normal mode is calculated as:
 
 ```math
-Q_i = {l_i}^\mathsf{T} M^{\frac{1}{2}} (\bm{x}_\text{snap}^{\text{aligned}} - \bm{x}_{\text{ref}})
+Q_i = {l_i}^\mathsf{T} M^{\frac{1}{2}} (\mathbf{\mathit{x}}_\text{snap}^{\text{aligned}} - \mathbf{\mathit{x}}_{\text{ref}})
 ```
 
 where:
 
-* $`\bm{x}_\text{snap}^{\text{aligned}}`$: Flattened coordinate vector ($`3N \times 1`$) derived from $`X_{\text{snap}}^{\text{aligned}}`$.
-* $`\bm{x}_\text{ref}`$: Flattened reference coordinate vector derived from $`X_{\text{ref}}`$ ($`3N \times 1`$).
+* $`\mathbf{\mathit{x}}_\text{snap}^{\text{aligned}}`$: Flattened coordinate vector ($`3N \times 1`$) derived from $`X_{\text{snap}}^{\text{aligned}}`$.
+* $`\mathbf{\mathit{x}}_\text{ref}`$: Flattened reference coordinate vector derived from $`X_{\text{ref}}`$ ($`3N \times 1`$).
 * $`M`$: Diagonal mass matrix ($`3N \times 3N`$). Each atomic mass is repeated 3 times along the diagonal.
 * $`l_i`$: The $`i`$-th normal mode eigenvector ($`3N \times 1`$) of the mass-weighted Hessian.
 
 > [!NOTE]
-> The mass-weighted displacement vector $`\bm{q}`$ can be reconstructed from the normal mode coordinates $`Q_i`$:
+> The mass-weighted displacement vector $`\mathbf{\mathit{q}}`$ can be reconstructed from the normal mode coordinates $`Q_i`$:
 >
-> ```math
+> $$
 > \begin{align*}
->     \bm{q} & = LQ \\
->         & = \sum_{i} Q_i \bm{l}_i
+>     \mathbf{\mathit{q}} & = LQ \\
+>         & = \sum_{i} Q_i \mathbf{l}_i
 > \end{align*}
-> ```
+> $$
 >
-> where $`\bm{q} = M^{\frac{1}{2}} (\bm{x}_{\text{snap}}^{\text{aligned}} - \bm{x}_{\text{ref}})`$.
+> where $`\mathbf{\mathit{q}} = M^{\frac{1}{2}} (\mathbf{\mathit{x}}_{\text{snap}}^{\text{aligned}} - \mathbf{\mathit{x}}_{\text{ref}})`$.
 
 ## License
 
