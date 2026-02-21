@@ -116,7 +116,7 @@ class ReferenceMolecule(BaseModel):
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
 
         masses_q = ureg.Quantity(atommasses, "amu")
-        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")  # TODO(poponta): #3
+        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
 
         return cls(
