@@ -9,28 +9,83 @@ logger = getLogger(__name__)
 
 
 class BaseTrajectoryParser(ABC):
-    """Base class for trajectory parsers."""
+    """
+    Base class for trajectory parsers.
+    """
 
     def __init__(self, file_path: Path):
+        """
+        Initializes a BaseTrajectoryParser object.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the trajectory file to be parsed.
+        """
         self.file_path: Path = file_path
 
     @abstractmethod
     def __len__(self) -> int:
-        """Return the number of frames in the trajectory."""
+        """
+        Returns the number of frames in the trajectory.
+
+        Returns
+        -------
+        int
+            Number of frames in the trajectory.
+        """
 
     @abstractmethod
     def __iter__(self) -> Iterator[np.ndarray]:
-        """Iterate over the trajectory data."""
+        """
+        Iterate over the trajectory data.
+
+        Yields
+        -------
+        np.ndarray
+            A 3D NumPy array containing the coordinates of each atom in the current frame.
+        """
 
 
 class XYZParser(BaseTrajectoryParser):
-    """Parser for XYZ trajectory files."""
+    """
+    Parser for XYZ trajectory files.
+    """
 
     def __init__(self, file_path: Path):
+        """
+        Initializes an XYZParser object.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the XYZ trajectory file to be parsed.
+
+        Attributes
+        ----------
+        _num_frames : int | None
+            The number of frames in the trajectory.
+        """
         super().__init__(file_path)
         self._num_frames: int | None = None
 
     def __len__(self) -> int:
+        """
+        Returns the number of frames in the XYZ trajectory file.
+
+        If the number of frames has already been calculated, it is returned immediately.
+        Otherwise, the number of frames is calculated by counting the number of newline characters in the file and dividing by the number of lines per frame (natoms + 2).
+
+        Returns
+        -------
+        int
+            Number of frames in the XYZ trajectory file.
+
+        Raises
+        ------
+        ValueError
+            If the number of frames is 0 or cannot be determined.
+        """  # noqa: E501
         if self._num_frames is not None:
             return self._num_frames
 
@@ -63,6 +118,16 @@ class XYZParser(BaseTrajectoryParser):
         return self._num_frames
 
     def __iter__(self) -> Iterator[np.ndarray]:
+        """
+        Iterates over the frames in the XYZ trajectory file.
+
+        Yields each frame as a 2D NumPy array with shape (natoms, 3), where each row represents the coordinates of an atom in the frame.
+
+        Raises
+        ------
+        ValueError
+            If the XYZ file contains invalid or malformed data (e.g., non-numeric atom coordinates, missing/extra lines, etc.).
+        """  # noqa: E501
         logger.debug(f"Iterating over XYZ file: {self.file_path}")
 
         with self.file_path.open(mode="r", encoding="utf-8") as f:
@@ -103,7 +168,24 @@ class XYZParser(BaseTrajectoryParser):
 
 
 def get_trajectory_parser(file_path: Path) -> BaseTrajectoryParser:
-    """Factory function to get the appropriate trajectory parser based on file extension."""
+    """
+    Returns a trajectory parser object based on the file extension.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to the trajectory file to be parsed.
+
+    Returns
+    -------
+    BaseTrajectoryParser
+        A trajectory parser object that can be used to parse the trajectory file.
+
+    Raises
+    ------
+    ValueError
+        If the file extension is not supported.
+    """
     ext = file_path.suffix.lower()
     logger.debug(f"Getting trajectory parser for file: {file_path} with extension: {ext}")
 
