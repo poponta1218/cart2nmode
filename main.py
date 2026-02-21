@@ -80,7 +80,7 @@ class SnapshotMolecule(BaseModel):
                 f"Consider splitting the file into separate frames if you want to project multiple snapshots."
             )
 
-        coords_q = ureg.Quantity(atomcoords[-1], input_unit).to("bohr")  # TODO(poponta): handle multiple frames
+        coords_q = ureg.Quantity(atomcoords[-1], input_unit).to("bohr")  # TODO(poponta): #3
         return cls(coords=coords_q)
 
 
@@ -137,7 +137,7 @@ class ReferenceMolecule(BaseModel):
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
 
         masses_q = ureg.Quantity(atommasses, "amu")
-        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")  # TODO(poponta): handle multiple frames
+        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")  # TODO(poponta): #3
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
 
         return cls(
