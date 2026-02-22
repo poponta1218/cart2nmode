@@ -23,7 +23,7 @@ import polars as pl
 from pint.facets.plain import PlainQuantity
 from pydantic import BaseModel, ConfigDict, Field
 
-from utils.parser import get_reference_parser, get_trajectory_parser
+from utils.parsers import get_reference_parser, get_trajectory_parser
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
