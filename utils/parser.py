@@ -22,6 +22,11 @@ class BaseTrajectoryParser(ABC):
         file_path : Path
             Path to the trajectory file to be parsed.
         """
+        if not file_path.exists():
+            emsg = f"Trajectory file not found: {file_path}"
+            logger.error(emsg)
+            raise FileNotFoundError(emsg)
+
         self.file_path: Path = file_path
 
     @abstractmethod
@@ -126,11 +131,6 @@ class XYZParser(BaseTrajectoryParser):
 
         if self._num_frames == 0:
             emsg = f"No frames found in XYZ file: {self.file_path}"
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        if self._num_frames is None:
-            emsg = f"Could not determine number of frames in XYZ file: {self.file_path}"
             logger.error(emsg)
             raise ValueError(emsg)
 
