@@ -40,13 +40,17 @@ class ReferenceMolecule(BaseModel):
     atomnos: np.ndarray = Field(..., description="Atomic numbers of the atoms in the molecule")
     masses: PlainQuantity[Any] = Field(..., description="Masses of the atoms in the molecule")
     coords: PlainQuantity[Any] = Field(..., description="Coordinates of the atoms in the molecule")
+    gradient: PlainQuantity[Any] | None = Field(None, description="Gradient of the molecule, if available")
     hessian: PlainQuantity[Any] = Field(..., description="Hessian matrix of the molecule")
+
+    is_projected: bool = Field(default=False, description="Whether to project out translation, rotation, and gradient")
+    n_zero_modes: int = Field(default=0, description="Number of modes to project out based on zero eigenvalues")
 
     eigenvalues: PlainQuantity[Any] | None = Field(None, description="Eigenvalues of the Hessian matrix")
     eigenvectors: np.ndarray | None = Field(None, description="Eigenvectors of the Hessian matrix")
 
     @classmethod
-    def from_file(cls, file_path: Path) -> "ReferenceMolecule":
+    def from_file(cls, file_path: Path, *, is_projected: bool = False) -> "ReferenceMolecule":
         """
         Reads a reference molecule from a file.
 
@@ -54,6 +58,8 @@ class ReferenceMolecule(BaseModel):
         ----------
         file_path : Path
             Path to the file containing the reference molecule.
+        is_projected : bool, optional
+            Whether to project out translation, rotation, and gradient modes (default: False).
 
         Returns
         -------
@@ -88,15 +94,29 @@ class ReferenceMolecule(BaseModel):
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
         coords_unit = cast("str", getattr(data, "coords_unit"))  # noqa: B009
 
+        gradient = cast("np.ndarray | None", getattr(data, "gradient", None))
+
         masses_q = ureg.Quantity(masses, "amu")
         coords_q = ureg.Quantity(coords, coords_unit).to("bohr")
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
+
+        gradient_q = None
+        if is_projected:
+            if gradient is not None:
+                gradient_q = ureg.Quantity(gradient, "hartree / bohr")
+            else:
+                emsg = "Projected Hessian requested but no gradient information found in the reference molecule file. "
+                logger.error(emsg)
+                raise ValueError(emsg)
 
         return cls(
             atomnos=atomnos,
             masses=masses_q,
             coords=coords_q,
+            gradient=gradient_q,
             hessian=hessian_q,
+            is_projected=is_projected,
+            n_zero_modes=0,
             eigenvalues=None,
             eigenvectors=None,
         )
@@ -109,7 +129,15 @@ class ReferenceMolecule(BaseModel):
 
         This function is called automatically after the model is initialized.
         """
-        self._diag_mw_hessian()
+        if self.is_projected:
+            self._diag_projected_mw_hessian()
+        else:
+            self._diag_mw_hessian()
+
+        self.reduce_trans_rot()
+        self.frequency()
+
+        logger.debug(f"Calculated vibrational frequencies:\n{self.frequency()}")
 
     def _diag_mw_hessian(self) -> None:
         """
@@ -127,6 +155,84 @@ class ReferenceMolecule(BaseModel):
         mw_hessian = self.hessian.magnitude * inv_sqrt_m[:, np.newaxis] * inv_sqrt_m[np.newaxis, :]
 
         evals, evecs = np.linalg.eigh(mw_hessian)
+        self.eigenvalues = ureg.Quantity(evals, "hartree / (amu * bohr**2)")
+        self.eigenvectors = evecs
+
+        logger.debug(f"Diagonalization complete. Found {len(evals)} eigenvalues and eigenvectors.")
+
+    def _diag_projected_mw_hessian(self) -> None:
+        """
+        Diagonalizes the mass-weighted Hessian matrix after projecting out translation, rotation, and gradient modes.
+
+        This function first identifies the modes to be projected out based on zero eigenvalues and the presence of gradient information.
+        It then constructs a projection operator to remove these modes from the mass-weighted Hessian matrix.
+        Finally, it diagonalizes the projected mass-weighted Hessian matrix to obtain the eigenvalues and eigenvectors.
+
+        The eigenvalues are converted to units of "hartree / (amu * bohr**2)" and stored in the `eigenvalues` attribute.
+        The eigenvectors are stored in the `eigenvectors` attribute.
+        """  # noqa: E501
+        logger.debug("Projecting out translation, rotation, and gradient directions from the Hessian matrix.")
+
+        natom = len(self.atomnos)
+        masses = self.masses.magnitude
+        coords = self.coords.magnitude
+        hessian = self.hessian.magnitude
+
+        cent = np.average(coords, weights=masses, axis=0)
+        coords_cent = coords - cent
+
+        sqrt_m = np.sqrt(masses)
+        sqrt_m_repeated = np.repeat(sqrt_m, 3)
+        inv_sqrt_m_repeated = 1 / sqrt_m_repeated
+
+        mw_coords = coords_cent * sqrt_m[:, np.newaxis]
+
+        vecs = np.zeros((3 * natom, 7))
+
+        total_mass = np.sum(masses)
+
+        # Translational modes
+        vecs[0::3, 0] = sqrt_m * np.ones(natom) / np.sqrt(total_mass)
+        vecs[1::3, 1] = sqrt_m * np.ones(natom) / np.sqrt(total_mass)
+        vecs[2::3, 2] = sqrt_m * np.ones(natom) / np.sqrt(total_mass)
+
+        # Rotational modes
+        vecs[1::3, 3] = -mw_coords[:, 2]
+        vecs[2::3, 3] = -mw_coords[:, 1]
+        vecs[0::3, 4] = -mw_coords[:, 2]
+        vecs[2::3, 4] = mw_coords[:, 0]
+        vecs[0::3, 5] = mw_coords[:, 1]
+        vecs[1::3, 5] = -mw_coords[:, 0]
+
+        if self.gradient is not None:
+            mw_gradient = self.gradient.magnitude.flatten() * inv_sqrt_m_repeated
+            mw_grad_norm = np.linalg.norm(mw_gradient)
+            if mw_grad_norm > 1e-12:
+                vecs[:, 6] = mw_gradient / mw_grad_norm
+
+        U, S, _Vt = np.linalg.svd(vecs, full_matrices=False)  # noqa: N806
+        rank = np.sum(S > 1e-10)
+        self.n_zero_modes = int(rank)
+        logger.debug(f"Identified {self.n_zero_modes} modes to project out based on SVD of the mode matrix.")
+
+        expected_min_rank = 3 if natom == 1 else (5 if natom == 2 else 6)
+        if not (expected_min_rank <= rank <= 7):
+            wmsg = (
+                f"Unexpected number of projected modes identified for projection: {rank}. "
+                f"Nomally expected between {expected_min_rank} and 7. "
+            )
+            logger.warning(wmsg)
+            warnings.warn(wmsg, UserWarning, stacklevel=2)
+
+        trg_basis = U[:, : self.n_zero_modes]
+        trg_proj_mat = trg_basis @ trg_basis.T
+        identity_mat = np.eye(3 * natom)
+        proj_mat = identity_mat - trg_proj_mat
+
+        mw_hessian = hessian * inv_sqrt_m_repeated[:, np.newaxis] * inv_sqrt_m_repeated[np.newaxis, :]
+        mw_hessian_proj = proj_mat.T @ mw_hessian @ proj_mat
+
+        evals, evecs = np.linalg.eigh(mw_hessian_proj)
         self.eigenvalues = ureg.Quantity(evals, "hartree / (amu * bohr**2)")
         self.eigenvectors = evecs
 
@@ -168,19 +274,21 @@ class ReferenceMolecule(BaseModel):
             )
             return
 
-        if natom == 1:
-            n_trans_rot = 3
+        if self.is_projected:
+            n_discard = self.n_zero_modes
+        elif natom == 1:
+            n_discard = 3
         elif natom == 2:
-            n_trans_rot = 5
+            n_discard = 5
         else:
-            n_trans_rot = 6
+            n_discard = 6
 
         logger.debug(
-            f"Identifying {n_trans_rot} translational and rotational modes to reduce based on absolute eigenvalue magnitudes."  # noqa: E501
+            f"Identifying {n_discard} translational and rotational modes to reduce based on absolute eigenvalue magnitudes."  # noqa: E501
         )
 
         idx = np.argsort(np.abs(self.eigenvalues.magnitude))
-        vib_idx = np.sort(idx[n_trans_rot:])
+        vib_idx = np.sort(idx[n_discard:])
 
         eigenvalues = self.eigenvalues.magnitude[vib_idx]
         self.eigenvalues = ureg.Quantity(eigenvalues, self.eigenvalues.units)
@@ -506,6 +614,13 @@ def parse_args() -> argparse.Namespace:
         help="Whether to reduce translational and rotational modes from the reference (default: True)",
     )
     parser.add_argument(
+        "-p",
+        "--projected",
+        action="store_true",
+        default=False,
+        help="Whether to use projected Hessian matrix (default: False)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -604,7 +719,7 @@ def main():
         input_unit = validate_length_unit(args.input_unit)
         output_unit = validate_length_unit(args.output_unit)
 
-        ref = ReferenceMolecule.from_file(file_path=args.reference)
+        ref = ReferenceMolecule.from_file(file_path=args.reference, is_projected=args.projected)
         trajectory = SnapshotTrajectory(file_path=args.snapshot, input_unit=input_unit)
 
         if args.reduce_trans_rot:

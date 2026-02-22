@@ -20,6 +20,7 @@ class ReferenceData:
     atomnos: np.ndarray
     masses: np.ndarray
     coords: np.ndarray
+    gradient: np.ndarray | None
     hessian: np.ndarray
     coords_unit: str
 
@@ -99,10 +100,15 @@ class CclibReferenceParser(BaseReferenceParser):
         atomcoords = cast("np.ndarray", getattr(data, "atomcoords"))  # noqa: B009
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
 
+        gradient = None
+        if hasattr(data, "grads"):
+            gradient = cast("np.ndarray", getattr(data, "grads"))  # noqa: B009
+
         return ReferenceData(
             atomnos=atomnos,
             masses=atommasses,
             coords=atomcoords[-1],
+            gradient=gradient,
             hessian=hessian,
             coords_unit="angstrom",
         )
@@ -128,6 +134,7 @@ class FChkReferenceParser(BaseReferenceParser):
         atomnos: np.ndarray | None = None
         coords_1d: np.ndarray | None = None
         masses: np.ndarray | None = None
+        gradient_1d: np.ndarray | None = None
         hessian_1d: np.ndarray | None = None
 
         with self.file_path.open(mode="r", encoding="utf-8") as f:
@@ -146,6 +153,9 @@ class FChkReferenceParser(BaseReferenceParser):
                 elif line.startswith("Real atomic weights"):
                     n_items = int(line.split("N=")[1].strip())
                     masses = self._read_array(f, n_items, float)
+                elif line.startswith("Cartesian Gradient"):
+                    n_items = int(line.split("N=")[1].strip())
+                    gradient_1d = self._read_array(f, n_items, float)
                 elif line.startswith("Cartesian Force Constants"):
                     n_items = int(line.split("N=")[1].strip())
                     hessian_1d = self._read_array(f, n_items, float)
@@ -160,6 +170,10 @@ class FChkReferenceParser(BaseReferenceParser):
         hessian_1d = cast("np.ndarray", hessian_1d)
 
         coords = coords_1d.reshape(-1, 3)
+
+        gradient = None
+        if gradient_1d is not None:
+            gradient = gradient_1d.reshape(-1, 3)
 
         natoms = len(atomnos)
         dim = 3 * natoms
@@ -182,6 +196,7 @@ class FChkReferenceParser(BaseReferenceParser):
             atomnos=atomnos,
             masses=masses,
             coords=coords,
+            gradient=gradient,
             hessian=hessian,
             coords_unit="bohr",
         )
