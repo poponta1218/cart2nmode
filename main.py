@@ -391,7 +391,7 @@ class Projector:
                 "frame": frame_idx,
             }
             for m_idx, disp in zip(mode_idx, nmode_coords.magnitude, strict=True):
-                row_data[f"mode{m_idx}"] = disp
+                row_data[f"mode_{m_idx}"] = disp
             rows.append(row_data)
 
         df = pl.DataFrame(rows)
@@ -403,12 +403,12 @@ class Projector:
         if align:
             df_formatted = df.select(
                 pl.col("frame").map_elements(lambda x: f"{x:>{frame_fmt_width}d}"),
-                *[pl.col(f"mode{mode}").map_elements(lambda x: f"{x:>13.4E}") for mode in mode_idx],
+                *[pl.col(f"mode_{mode}").map_elements(lambda x: f"{x:>13.4E}") for mode in mode_idx],
             )
         else:
             df_formatted = df.select(
                 pl.col("frame"),
-                *[pl.col(f"mode{mode}").map_elements(lambda x: f"{x:.4E}") for mode in mode_idx],
+                *[pl.col(f"mode_{mode}").map_elements(lambda x: f"{x:.4E}") for mode in mode_idx],
             )
         df_formatted.write_csv(csv_path, quote_style="never")
 
