@@ -81,7 +81,7 @@ uv run main.py \
 | --- | --- | --- | --- | --- |
 | **Reference** | `-r`, `--reference` | Path | **Required** | Path to the reference file (e.g., `.fchk`). Must contain Hessian/Frequency data. |
 | **Snapshot** | `-s`, `--snapshot` | Path | **Required** | Path to the snapshot file (e.g., `.xyz`). |
-| **Output Name** | `-o`, `--output-csv-name` | Path | `None` | Filename for the output CSV. Saves to `data/csv/` if a filename is given, or respects absolute paths. |
+| **Output Name** | `-o`, `--output-csv-name` | Path | `<snapshot_name>-nmode.csv` | Filename for the output CSV. By default, it saves to `data/csv/` using the snapshot's base name appended with `-nmode`. It also respects absolute paths if provided. |
 | **Input Unit** | `-u`, `--input-unit` | Str | `angstrom` | Unit of coordinates in the snapshot file (e.g., `angstrom`, `bohr`). |
 | **Output Unit** | `-U`, `--output-unit` | Str | `bohr` | Unit for the projected coordinates (sqrt(amu) * Unit). |
 | **Align CSV** | `-a`, `--align-csv` | Bool | `True` | Format CSV columns with padding for readability. Use `--no-align-csv` to disable. |

@@ -481,7 +481,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output-csv-name",
         type=Path,
-        help="Path to the output CSV file for normal mode coordinates",
+        help="Path to the output CSV file for normal mode coordinates (default: data/csv/<snapshot_name>-nmode.csv)",
     )
     parser.add_argument(
         "-a",
@@ -626,9 +626,14 @@ def main():
             else:
                 csv_dir = PROJECT_ROOT.joinpath("data/csv")
                 csv_path = csv_dir.joinpath(args.output_csv_name.name)
-            csv_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            default_csv_name = f"{args.snapshot.stem}-nmode.csv"
+            csv_dir = PROJECT_ROOT.joinpath("data/csv")
+            csv_path = csv_dir.joinpath(default_csv_name)
 
-            projector.to_csv(csv_path=csv_path, projections=projections, align=args.align_csv)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        projector.to_csv(csv_path=csv_path, projections=projections, align=args.align_csv)
 
     except Exception:
         logger.exception("An unexpected error occurred")
