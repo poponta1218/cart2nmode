@@ -20,11 +20,10 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pint
 import polars as pl
-from cclib.io.ccio import ccread
 from pint.facets.plain import PlainQuantity
 from pydantic import BaseModel, ConfigDict, Field
 
-from utils.parser import get_trajectory_parser
+from utils.parser import get_reference_parser, get_trajectory_parser
 
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
@@ -68,14 +67,15 @@ class ReferenceMolecule(BaseModel):
         """
         logger.debug(f"Reading reference molecule from file: {file_path}")
 
-        data = ccread(str(file_path))
+        parser = get_reference_parser(file_path)
+        data = parser.parse()
 
         if data is None:
             emsg = f"Failed to parse the reference molecule file: {file_path}"
             logger.error(emsg)
             raise ValueError(emsg)
 
-        required_attrs = ["atomnos", "atommasses", "atomcoords", "hessian"]
+        required_attrs = ["atomnos", "masses", "coords", "hessian"]
         for attr in required_attrs:
             if not hasattr(data, attr):
                 emsg = f"Missing required attribute '{attr}' in the reference molecule file: {file_path}"
@@ -83,12 +83,12 @@ class ReferenceMolecule(BaseModel):
                 raise ValueError(emsg)
 
         atomnos = cast("np.ndarray", getattr(data, "atomnos"))  # noqa: B009
-        atommasses = cast("np.ndarray", getattr(data, "atommasses"))  # noqa: B009
-        atomcoords = cast("np.ndarray", getattr(data, "atomcoords"))  # noqa: B009
+        masses = cast("np.ndarray", getattr(data, "masses"))  # noqa: B009
+        coords = cast("np.ndarray", getattr(data, "coords"))  # noqa: B009
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
 
-        masses_q = ureg.Quantity(atommasses, "amu")
-        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")
+        masses_q = ureg.Quantity(masses, "amu")
+        coords_q = ureg.Quantity(coords, "angstrom").to("bohr")
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
 
         return cls(
