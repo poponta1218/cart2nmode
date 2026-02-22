@@ -21,6 +21,7 @@ class ReferenceData:
     masses: np.ndarray
     coords: np.ndarray
     hessian: np.ndarray
+    coords_unit: str
 
 
 class BaseReferenceParser(ABC):
@@ -103,6 +104,7 @@ class CclibReferenceParser(BaseReferenceParser):
             masses=atommasses,
             coords=atomcoords[-1],
             hessian=hessian,
+            coords_unit="angstrom",
         )
 
 
@@ -123,8 +125,82 @@ class FChkReferenceParser(BaseReferenceParser):
         """  # noqa: E501
         logger.debug(f"Parsing reference file with manual FChk parser: {self.file_path}")
 
-        emsg = f"Manual FChk parser is not implemented yet for file: {self.file_path}"
-        raise NotImplementedError(emsg)
+        atomnos: np.ndarray | None = None
+        coords_1d: np.ndarray | None = None
+        masses: np.ndarray | None = None
+        hessian_1d: np.ndarray | None = None
+
+        with self.file_path.open(mode="r", encoding="utf-8") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+
+                line = line.strip()
+                if line.startswith("Atomic numbers"):
+                    n_items = int(line.split("N=")[1].strip())
+                    atomnos = self._read_array(f, n_items, int)
+                elif line.startswith("Current cartesian coordinates"):
+                    n_items = int(line.split("N=")[1].strip())
+                    coords_1d = self._read_array(f, n_items, float)
+                elif line.startswith("Real atomic weights"):
+                    n_items = int(line.split("N=")[1].strip())
+                    masses = self._read_array(f, n_items, float)
+                elif line.startswith("Cartesian Force Constants"):
+                    n_items = int(line.split("N=")[1].strip())
+                    hessian_1d = self._read_array(f, n_items, float)
+
+        if not all(var is not None for var in [atomnos, coords_1d, masses, hessian_1d]):
+            emsg = f"Failed to parse all required data from the reference file: {self.file_path}"
+            raise ValueError(emsg)
+
+        atomnos = cast("np.ndarray", atomnos)
+        coords_1d = cast("np.ndarray", coords_1d)
+        masses = cast("np.ndarray", masses)
+        hessian_1d = cast("np.ndarray", hessian_1d)
+
+        coords = coords_1d.reshape(-1, 3)
+
+        natoms = len(atomnos)
+        dim = 3 * natoms
+        expected_hessian_size = dim * (dim + 1) // 2
+        if len(hessian_1d) != expected_hessian_size:
+            emsg = (
+                f"Unexpected size of the Hessian data in the reference file: {self.file_path}. "
+                f"Expected {expected_hessian_size} elements, got {len(hessian_1d)}."
+            )
+            raise ValueError(emsg)
+
+        hessian = np.zeros((dim, dim), dtype=np.float64)
+        row_idx, col_idx = np.tril_indices(dim)
+        hessian[row_idx, col_idx] = hessian_1d
+        hessian[col_idx, row_idx] = hessian_1d
+
+        logger.debug(f"Successfully parsed reference data from file: {self.file_path}")
+
+        return ReferenceData(
+            atomnos=atomnos,
+            masses=masses,
+            coords=coords,
+            hessian=hessian,
+            coords_unit="bohr",
+        )
+
+    def _read_array(self, f, n_items: int, dtype: type) -> np.ndarray:
+        data = []
+        while len(data) < n_items:
+            line = f.readline()
+            if not line:
+                break
+
+            line = line.strip()
+            if not line:
+                continue
+
+            data.extend([dtype(item) for item in line.split()])
+
+        logger.debug(f"Read {len(data)} items, expected {n_items} items.")
+        return np.array(data, dtype=dtype)
 
 
 class BaseTrajectoryParser(ABC):
@@ -380,7 +456,9 @@ def get_reference_parser(file_path: Path) -> BaseReferenceParser:
     logger.debug(f"Getting reference parser for file: {file_path} with extension: {ext}")
 
     match ext:
-        case ".fchk" | ".log" | ".out":
+        case ".fchk":
+            return FChkReferenceParser(file_path)
+        case ".log" | ".out":
             return CclibReferenceParser(file_path)
         case _:
             emsg = f"Unsupported file format: {file_path.suffix}"

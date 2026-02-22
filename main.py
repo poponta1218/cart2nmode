@@ -75,7 +75,7 @@ class ReferenceMolecule(BaseModel):
             logger.error(emsg)
             raise ValueError(emsg)
 
-        required_attrs = ["atomnos", "masses", "coords", "hessian"]
+        required_attrs = ["atomnos", "masses", "coords", "hessian", "coords_unit"]
         for attr in required_attrs:
             if not hasattr(data, attr):
                 emsg = f"Missing required attribute '{attr}' in the reference molecule file: {file_path}"
@@ -86,9 +86,10 @@ class ReferenceMolecule(BaseModel):
         masses = cast("np.ndarray", getattr(data, "masses"))  # noqa: B009
         coords = cast("np.ndarray", getattr(data, "coords"))  # noqa: B009
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
+        coords_unit = cast("str", getattr(data, "coords_unit"))  # noqa: B009
 
         masses_q = ureg.Quantity(masses, "amu")
-        coords_q = ureg.Quantity(coords, "angstrom").to("bohr")
+        coords_q = ureg.Quantity(coords, coords_unit).to("bohr")
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
 
         return cls(
