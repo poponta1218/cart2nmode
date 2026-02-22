@@ -43,7 +43,18 @@ class SnapshotMolecule(BaseModel):
 class SnapshotTrajectory:
     def __init__(self, file_path: Path, input_unit: pint.Unit):
         """
-        Reads a molecular trajectory (or multiple frames) from a file.
+        Initializes a SnapshotTrajectory object.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the snapshot trajectory file to be parsed.
+        input_unit : pint.Unit
+            Unit of coordinates in the snapshot trajectory file (e.g., angstrom, bohr).
+
+        Notes
+        ----
+        The function creates a trajectory parser object based on the file extension.
         """
         self.file_path = file_path
         self.input_unit = input_unit
@@ -52,12 +63,25 @@ class SnapshotTrajectory:
         logger.debug(f"Reading snapshot trajectory from file: {file_path} (Input unit: {input_unit})")
 
     def __len__(self) -> int:
+        """
+        Returns the number of frames in the snapshot trajectory file.
+
+        Returns
+        -------
+        int
+            Number of frames in the snapshot trajectory file.
+        """
         return len(self.parser)
 
     def __iter__(self) -> Iterator[tuple[int, SnapshotMolecule]]:
         """
-        Yields each frame as a SnapshotMolecule instance.
-        """
+        Iterate over the frames in the snapshot trajectory file.
+
+        Yields each frame as a tuple of (`frame_idx`, `SnapshotMolecule`),
+        where `frame_idx` is the index of the frame and `SnapshotMolecule` is an object containing the coordinates of the atoms in the frame.
+
+        The coordinates are in units of bohr, regardless of the input unit specified during initialization.
+        """  # noqa: E501
         for frame_idx, coords in enumerate(self.parser):
             coords_q = ureg.Quantity(coords, self.input_unit).to("bohr")
             yield frame_idx, SnapshotMolecule(coords=coords_q)
