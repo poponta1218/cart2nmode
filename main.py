@@ -134,11 +134,6 @@ class ReferenceMolecule(BaseModel):
         else:
             self._diag_mw_hessian()
 
-        self.reduce_trans_rot()
-        self.frequency()
-
-        logger.debug(f"Calculated vibrational frequencies:\n{self.frequency()}")
-
     def _diag_mw_hessian(self) -> None:
         """
         Diagonalizes the mass-weighted Hessian matrix to obtain eigenvalues and eigenvectors.
@@ -727,6 +722,7 @@ def main():
         else:
             logger.info("Skipping reduction of translational and rotational modes as per user request.")
 
+        logger.debug(f"Computed vibrational frequencies:\n{ref.frequency().magnitude} cm^-1")
         projector = Projector(ref=ref, output_unit=output_unit, kabsch_threshold=args.kabsch_threshold)
 
         projections = []
