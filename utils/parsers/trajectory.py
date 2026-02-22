@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 
 @register_trajectory(priority=20)
-class XYZParser(BaseTrajectoryParser):
+class XYZTrajectoryParser(BaseTrajectoryParser):
     """
     Parser for XYZ trajectory files.
     """
@@ -34,7 +34,7 @@ class XYZParser(BaseTrajectoryParser):
 
     def __init__(self, file_path: Path):
         """
-        Initializes an XYZParser object.
+        Initializes an XYZTrajectoryParser object.
 
         Parameters
         ----------
