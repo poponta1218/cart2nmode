@@ -44,7 +44,6 @@ class BaseReferenceParser(ABC):
         """
         if not file_path.exists():
             emsg = f"Reference file not found: {file_path}"
-            logger.error(emsg)
             raise FileNotFoundError(emsg)
 
         self.file_path: Path = file_path
@@ -86,14 +85,12 @@ class CclibReferenceParser(BaseReferenceParser):
 
         if data is None:
             emsg = f"Failed to parse the reference molecule file: {self.file_path}"
-            logger.error(emsg)
             raise ValueError(emsg)
 
         required_attrs = ["atomnos", "atommasses", "atomcoords", "hessian"]
         for attr in required_attrs:
             if not hasattr(data, attr):
                 emsg = f"Missing required attribute '{attr}' in the reference molecule file: {self.file_path}"
-                logger.error(emsg)
                 raise ValueError(emsg)
 
         atomnos = cast("np.ndarray", getattr(data, "atomnos"))  # noqa: B009
@@ -127,7 +124,6 @@ class FChkReferenceParser(BaseReferenceParser):
         logger.debug(f"Parsing reference file with manual FChk parser: {self.file_path}")
 
         emsg = f"Manual FChk parser is not implemented yet for file: {self.file_path}"
-        logger.error(emsg)
         raise NotImplementedError(emsg)
 
 
@@ -147,7 +143,6 @@ class BaseTrajectoryParser(ABC):
         """
         if not file_path.exists():
             emsg = f"Trajectory file not found: {file_path}"
-            logger.error(emsg)
             raise FileNotFoundError(emsg)
 
         self.file_path: Path = file_path
@@ -236,7 +231,6 @@ class XYZParser(BaseTrajectoryParser):
 
         if self._num_frames == 0:
             emsg = f"No frames found in XYZ file: {self.file_path}"
-            logger.error(emsg)
             raise ValueError(emsg)
 
         return self._num_frames
@@ -268,7 +262,6 @@ class XYZParser(BaseTrajectoryParser):
                     num_atoms = int(line)
                 except ValueError as e:
                     emsg = f"Invalid XYZ format. Expected number of atoms, got: {line}"
-                    logger.exception(emsg)
                     raise ValueError(emsg) from e
 
                 _comment = f.readline()
@@ -278,14 +271,12 @@ class XYZParser(BaseTrajectoryParser):
                     atom_line = f.readline().strip().split()
                     if len(atom_line) < 4:
                         emsg = f"Invalid XYZ format. Expected at least 4 columns, got: {atom_line}"
-                        logger.error(emsg)
                         raise ValueError(emsg)
 
                     try:
                         coords[i] = [float(coord) for coord in atom_line[1:4]]
                     except ValueError as e:
                         emsg = f"Invalid coordinate format in XYZ file: {atom_line[1:4]}"
-                        logger.exception(emsg)
                         raise ValueError(emsg) from e
 
                 yield coords
@@ -356,7 +347,6 @@ class XYZParser(BaseTrajectoryParser):
                     current_natoms = int(line)
                 except ValueError as e:
                     emsg = f"Invalid atom count at frame {frames} in {self.file_path}. Got: '{line}'"
-                    logger.exception(emsg)
                     raise ValueError(emsg) from e
 
                 frames += 1
@@ -394,7 +384,6 @@ def get_reference_parser(file_path: Path) -> BaseReferenceParser:
             return CclibReferenceParser(file_path)
         case _:
             emsg = f"Unsupported file format: {file_path.suffix}"
-            logger.error(emsg)
             raise ValueError(emsg)
 
 
@@ -425,5 +414,4 @@ def get_trajectory_parser(file_path: Path) -> BaseTrajectoryParser:
             return XYZParser(file_path)
         case _:
             emsg = f"Unsupported file format: {file_path.suffix}"
-            logger.error(emsg)
             raise ValueError(emsg)
