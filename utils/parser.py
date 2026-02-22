@@ -187,6 +187,27 @@ class FChkReferenceParser(BaseReferenceParser):
         )
 
     def _read_array(self, f, n_items: int, dtype: type) -> np.ndarray:
+        """
+        Reads a list of items of type `dtype` from a file-like object `f` until `n_items` items are read.
+
+        Parameters
+        ----------
+        f : file-like object
+            A file-like object to read from.
+        n_items : int
+            The number of items to read.
+        dtype : type
+            The type of the items to read.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array containing the read items.
+
+        Notes
+        -----
+        This function will stop reading when it reaches the end of the file, even if `n_items` items have not been read.
+        """  # noqa: E501
         data = []
         while len(data) < n_items:
             line = f.readline()
@@ -406,7 +427,7 @@ class XYZParser(BaseTrajectoryParser):
         Raises
         ------
         ValueError
-            If invalid atom counts are encounterd during parsing.
+            If invalid atom counts are encountered during parsing.
         """
         frames = 0
         with self.file_path.open(mode="r", encoding="utf-8") as f:
