@@ -35,58 +35,6 @@ ureg.enable_contexts("energy", "spectroscopy")
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 
-class SnapshotMolecule(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    coords: PlainQuantity[Any] = Field(..., description="Coordinates of the atoms in the molecule")
-
-
-class SnapshotTrajectory:
-    def __init__(self, file_path: Path, input_unit: pint.Unit):
-        """
-        Initializes a SnapshotTrajectory object.
-
-        Parameters
-        ----------
-        file_path : Path
-            Path to the snapshot trajectory file to be parsed.
-        input_unit : pint.Unit
-            Unit of coordinates in the snapshot trajectory file (e.g., angstrom, bohr).
-
-        Notes
-        ----
-        The function creates a trajectory parser object based on the file extension.
-        """
-        self.file_path = file_path
-        self.input_unit = input_unit
-
-        self.parser = get_trajectory_parser(file_path)
-        logger.debug(f"Reading snapshot trajectory from file: {file_path} (Input unit: {input_unit})")
-
-    def __len__(self) -> int:
-        """
-        Returns the number of frames in the snapshot trajectory file.
-
-        Returns
-        -------
-        int
-            Number of frames in the snapshot trajectory file.
-        """
-        return len(self.parser)
-
-    def __iter__(self) -> Iterator[tuple[int, SnapshotMolecule]]:
-        """
-        Iterate over the frames in the snapshot trajectory file.
-
-        Yields each frame as a tuple of (`frame_idx`, `SnapshotMolecule`),
-        where `frame_idx` is the index of the frame and `SnapshotMolecule` is an object containing the coordinates of the atoms in the frame.
-
-        The coordinates are in units of bohr, regardless of the input unit specified during initialization.
-        """  # noqa: E501
-        for frame_idx, coords in enumerate(self.parser):
-            coords_q = ureg.Quantity(coords, self.input_unit).to("bohr")
-            yield frame_idx, SnapshotMolecule(coords=coords_q)
-
-
 class ReferenceMolecule(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -263,6 +211,58 @@ class ReferenceMolecule(BaseModel):
         omega_signed = np.sqrt(np.abs(vals)) * sign
         nu = omega_signed / (2 * np.pi)
         return ureg.Quantity(nu, "(hartree / (amu * bohr**2))**0.5").to("cm**-1")
+
+
+class SnapshotMolecule(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    coords: PlainQuantity[Any] = Field(..., description="Coordinates of the atoms in the molecule")
+
+
+class SnapshotTrajectory:
+    def __init__(self, file_path: Path, input_unit: pint.Unit):
+        """
+        Initializes a SnapshotTrajectory object.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the snapshot trajectory file to be parsed.
+        input_unit : pint.Unit
+            Unit of coordinates in the snapshot trajectory file (e.g., angstrom, bohr).
+
+        Notes
+        ----
+        The function creates a trajectory parser object based on the file extension.
+        """
+        self.file_path = file_path
+        self.input_unit = input_unit
+
+        self.parser = get_trajectory_parser(file_path)
+        logger.debug(f"Reading snapshot trajectory from file: {file_path} (Input unit: {input_unit})")
+
+    def __len__(self) -> int:
+        """
+        Returns the number of frames in the snapshot trajectory file.
+
+        Returns
+        -------
+        int
+            Number of frames in the snapshot trajectory file.
+        """
+        return len(self.parser)
+
+    def __iter__(self) -> Iterator[tuple[int, SnapshotMolecule]]:
+        """
+        Iterate over the frames in the snapshot trajectory file.
+
+        Yields each frame as a tuple of (`frame_idx`, `SnapshotMolecule`),
+        where `frame_idx` is the index of the frame and `SnapshotMolecule` is an object containing the coordinates of the atoms in the frame.
+
+        The coordinates are in units of bohr, regardless of the input unit specified during initialization.
+        """  # noqa: E501
+        for frame_idx, coords in enumerate(self.parser):
+            coords_q = ureg.Quantity(coords, self.input_unit).to("bohr")
+            yield frame_idx, SnapshotMolecule(coords=coords_q)
 
 
 class Projector:
