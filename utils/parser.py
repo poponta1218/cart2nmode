@@ -97,7 +97,12 @@ class XYZParser(BaseTrajectoryParser):
                 self._num_frames = 0
                 return self._num_frames
 
-            natoms = int(first_line)
+            try:
+                natoms = int(first_line)
+            except ValueError as e:
+                emsg = f"Invalid atom count in XYZ file {self.file_path}. Expected number of atoms, got: {first_line}"
+                logger.exception(emsg)
+                raise ValueError(emsg) from e
 
         lines_per_frame = natoms + 2
 
@@ -105,6 +110,15 @@ class XYZParser(BaseTrajectoryParser):
         with self.file_path.open(mode="rb") as f:
             for chunk in iter(lambda: f.read(1024 * 1024), b""):
                 total_lines += chunk.count(b"\n")
+
+        remainder = total_lines % lines_per_frame
+        if remainder != 0:
+            emsg = (
+                f"Malformed XYZ file {self.file_path}. Total lines: {total_lines} "
+                f"is not a multiple of lines per frame: {lines_per_frame}."
+            )
+            logger.error(emsg)
+            raise ValueError(emsg)
 
         self._num_frames = total_lines // lines_per_frame
         logger.debug(f"Found {self._num_frames} frames in total.")
