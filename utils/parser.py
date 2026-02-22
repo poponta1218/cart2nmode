@@ -115,7 +115,7 @@ class CclibReferenceParser(BaseReferenceParser):
 
 
 class FChkReferenceParser(BaseReferenceParser):
-    def parse(self) -> ReferenceData:
+    def parse(self) -> ReferenceData:  # noqa: C901
         """
         Parses the reference file using a manual parser for `.fchk` files and extracts necessary data for normal mode analysis.
 
@@ -381,7 +381,7 @@ class XYZParser(BaseTrajectoryParser):
                 coords = np.zeros((num_atoms, 3), dtype=np.float64)
                 for i in range(num_atoms):
                     atom_line = f.readline().strip().split()
-                    if len(atom_line) < 4:
+                    if len(atom_line) < 4:  # noqa: PLR2004
                         emsg = f"Invalid XYZ format. Expected at least 4 columns, got: {atom_line}"
                         raise ValueError(emsg)
 

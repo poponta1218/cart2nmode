@@ -207,16 +207,16 @@ class ReferenceMolecule(BaseModel):
         if self.gradient is not None:
             mw_gradient = self.gradient.magnitude.flatten() * inv_sqrt_m_repeated
             mw_grad_norm = np.linalg.norm(mw_gradient)
-            if mw_grad_norm > 1e-12:
+            if mw_grad_norm > 1e-12:  # noqa: PLR2004
                 vecs[:, 6] = mw_gradient / mw_grad_norm
 
         U, S, _Vt = np.linalg.svd(vecs, full_matrices=False)  # noqa: N806
-        rank = np.sum(S > 1e-10)
+        rank = np.sum(S > 1e-10)  # noqa: PLR2004
         self.n_zero_modes = int(rank)
         logger.debug(f"Identified {self.n_zero_modes} modes to project out based on SVD of the mode matrix.")
 
-        expected_min_rank = 3 if natom == 1 else (5 if natom == 2 else 6)
-        if not (expected_min_rank <= rank <= 7):
+        expected_min_rank = 3 if natom == 1 else (5 if natom == 2 else 6)  # noqa: PLR2004
+        if not (expected_min_rank <= rank <= 7):  # noqa: PLR2004
             wmsg = (
                 f"Unexpected number of projected modes identified for projection: {rank}. "
                 f"Nomally expected between {expected_min_rank} and 7. "
@@ -278,7 +278,7 @@ class ReferenceMolecule(BaseModel):
             n_discard = self.n_zero_modes
         elif natom == 1:
             n_discard = 3
-        elif natom == 2:
+        elif natom == 2:  # noqa: PLR2004
             n_discard = 5
         else:
             n_discard = 6
