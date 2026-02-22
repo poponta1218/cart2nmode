@@ -1,6 +1,7 @@
 import argparse
 import sys
 import warnings
+from collections.abc import Iterator
 from datetime import datetime
 from logging import (
     DEBUG,
@@ -23,6 +24,8 @@ from cclib.io.ccio import ccread
 from pint.facets.plain import PlainQuantity
 from pydantic import BaseModel, ConfigDict, Field
 
+from utils.parser import get_trajectory_parser
+
 logger = getLogger(__name__)
 logger.addHandler(NullHandler())
 
@@ -34,54 +37,54 @@ PROJECT_ROOT = Path(__file__).parent.resolve()
 
 class SnapshotMolecule(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-
     coords: PlainQuantity[Any] = Field(..., description="Coordinates of the atoms in the molecule")
 
-    @classmethod
-    def from_file(cls, file_path: Path, input_unit: pint.Unit) -> "SnapshotMolecule":
+
+class SnapshotTrajectory:
+    def __init__(self, file_path: Path, input_unit: pint.Unit):
         """
-        Reads a snapshot molecule from a file.
+        Initializes a SnapshotTrajectory object.
 
         Parameters
         ----------
         file_path : Path
-            Path to the file containing the snapshot molecule.
+            Path to the snapshot trajectory file to be parsed.
         input_unit : pint.Unit
-            The unit of the coordinates in the file. Must be a unit of length.
+            Unit of coordinates in the snapshot trajectory file (e.g., angstrom, bohr).
+
+        Notes
+        ----
+        The function creates a trajectory parser object based on the file extension.
+        """
+        self.file_path = file_path
+        self.input_unit = input_unit
+
+        self.parser = get_trajectory_parser(file_path)
+        logger.debug(f"Reading snapshot trajectory from file: {file_path} (Input unit: {input_unit})")
+
+    def __len__(self) -> int:
+        """
+        Returns the number of frames in the snapshot trajectory file.
 
         Returns
         -------
-        SnapshotMolecule
-            The snapshot molecule read from the file.
-
-        Raises
-        ------
-        ValueError
-            If the file does not contain the required attributes.
+        int
+            Number of frames in the snapshot trajectory file.
         """
-        logger.debug(f"Reading snapshot molecule from file: {file_path} (Input unit: {input_unit})")
+        return len(self.parser)
 
-        data = ccread(str(file_path))
-        if data is None:
-            emsg = f"Failed to parse the snapshot molecule file: {file_path}"
-            logger.error(emsg)
-            raise ValueError(emsg)
+    def __iter__(self) -> Iterator[tuple[int, SnapshotMolecule]]:
+        """
+        Iterate over the frames in the snapshot trajectory file.
 
-        if not hasattr(data, "atomcoords"):
-            emsg = f"Missing required attribute 'atomcoords' in the snapshot molecule file: {file_path}"
-            logger.error(emsg)
-            raise ValueError(emsg)
+        Yields each frame as a tuple of (`frame_idx`, `SnapshotMolecule`),
+        where `frame_idx` is the index of the frame and `SnapshotMolecule` is an object containing the coordinates of the atoms in the frame.
 
-        atomcoords = cast("np.ndarray", getattr(data, "atomcoords"))  # noqa: B009
-        if len(atomcoords) > 1:
-            logger.warning(
-                f"Multiple frames found in the snapshot molecule file: {file_path}. "
-                f"Only the last frame will be used for projection. "
-                f"Consider splitting the file into separate frames if you want to project multiple snapshots."
-            )
-
-        coords_q = ureg.Quantity(atomcoords[-1], input_unit).to("bohr")  # TODO(poponta): handle multiple frames
-        return cls(coords=coords_q)
+        The coordinates are in units of bohr, regardless of the input unit specified during initialization.
+        """  # noqa: E501
+        for frame_idx, coords in enumerate(self.parser):
+            coords_q = ureg.Quantity(coords, self.input_unit).to("bohr")
+            yield frame_idx, SnapshotMolecule(coords=coords_q)
 
 
 class ReferenceMolecule(BaseModel):
@@ -137,7 +140,7 @@ class ReferenceMolecule(BaseModel):
         hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
 
         masses_q = ureg.Quantity(atommasses, "amu")
-        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")  # TODO(poponta): handle multiple frames
+        coords_q = ureg.Quantity(atomcoords[-1], "angstrom").to("bohr")
         hessian_q = ureg.Quantity(hessian, "hartree / bohr**2")
 
         return cls(
@@ -348,7 +351,7 @@ class Projector:
         weighted_sq_diff = np.sum((diff**2) * weights.magnitude[:, np.newaxis], axis=1)
         rmsd = np.sqrt(np.sum(weighted_sq_diff) / np.sum(weights.magnitude))
 
-        logger.info(f"Kabsch Alignment RMSD: {rmsd:.3f} bohr")
+        logger.debug(f"Kabsch Alignment RMSD: {rmsd:.3f} bohr")
 
         if rmsd > self.kabsch_threshold:
             wmsg = (
@@ -369,7 +372,7 @@ class Projector:
         logger.debug("Projection complete.")
         return nmode_coords_q.to(self.output_unit)
 
-    def to_csv(self, csv_path: Path, nmode_coords: PlainQuantity[Any], *, align: bool) -> None:
+    def to_csv(self, csv_path: Path, projections: list[tuple[int, PlainQuantity[Any]]], *, align: bool) -> None:
         """
         Saves projected normal mode coordinates to a CSV file.
 
@@ -377,8 +380,8 @@ class Projector:
         ----------
         csv_path : Path
             Path to the output CSV file.
-        nmode_coords : PlainQuantity[Any]
-            Projected normal mode coordinates.
+        projections : list[tuple[int, PlainQuantity[Any]]]
+            List of tuples containing frame indices and projected normal mode coordinates.
         align : bool, optional
             Aligns the columns in the output CSV by padding with spaces, by default False.
         """
@@ -389,45 +392,47 @@ class Projector:
             logger.error(emsg)
             raise ValueError(emsg)
 
-        if not hasattr(self.ref, "frequency"):
-            emsg = "Reference molecule must have a method to compute frequencies."
-            logger.error(emsg)
-            raise ValueError(emsg)
+        if not projections:
+            emsg = "No projection results to save. The 'projections' list is empty."
+            logger.warning(emsg)
+            return
 
         natoms = len(self.ref.atomnos)
         n_full_modes = 3 * natoms
         n_skipped = n_full_modes - len(self.ref.eigenvalues.magnitude)
 
-        mode_idx = np.arange(len(self.ref.eigenvalues.magnitude))
-        frequency = self.ref.frequency().magnitude
+        eigenvalues = self.ref.eigenvalues.magnitude
+        mode_idx = np.arange(len(eigenvalues))
         if n_skipped > 0:
-            if frequency[0] < 0:
+            if eigenvalues[0] < 0:
                 mode_idx[1:] += n_skipped
             else:
                 mode_idx += n_skipped + 1
 
-        df = pl.DataFrame(
-            {
-                "mode": mode_idx,
-                "frequency": frequency,
-                "displacement": nmode_coords.magnitude,
+        rows = []
+        for frame_idx, nmode_coords in projections:
+            row_data = {
+                "frame": frame_idx,
             }
-        )
+            for m_idx, disp in zip(mode_idx, nmode_coords.magnitude, strict=True):
+                row_data[f"mode_{m_idx}"] = disp
+            rows.append(row_data)
+
+        df = pl.DataFrame(rows)
+        frame_fmt_width = len(str(len(projections) - 1))
 
         logger.debug(f"Dataframe created with {len(df)} rows.")
         logger.debug(f"Aligning columns in the output CSV: {align}.")
 
         if align:
             df_formatted = df.select(
-                pl.col("mode").map_elements(lambda x: f"{x:>3d}"),
-                pl.col("frequency").map_elements(lambda x: f"{x:>9.2f}"),
-                pl.col("displacement").map_elements(lambda x: f"{x:>13.4E}"),
+                pl.col("frame").map_elements(lambda x: f"{x:>{frame_fmt_width}d}"),
+                *[pl.col(f"mode_{mode}").map_elements(lambda x: f"{x:>13.4E}") for mode in mode_idx],
             )
         else:
             df_formatted = df.select(
-                pl.col("mode").map_elements(lambda x: f"{x:d}"),
-                pl.col("frequency").map_elements(lambda x: f"{x:.2f}"),
-                pl.col("displacement").map_elements(lambda x: f"{x:.4E}"),
+                pl.col("frame"),
+                *[pl.col(f"mode_{mode}").map_elements(lambda x: f"{x:.4E}") for mode in mode_idx],
             )
         df_formatted.write_csv(csv_path, quote_style="never")
 
@@ -599,7 +604,7 @@ def main():
         output_unit = validate_length_unit(args.output_unit)
 
         ref = ReferenceMolecule.from_file(file_path=args.reference)
-        snap = SnapshotMolecule.from_file(file_path=args.snapshot, input_unit=input_unit)
+        trajectory = SnapshotTrajectory(file_path=args.snapshot, input_unit=input_unit)
 
         if args.reduce_trans_rot:
             ref.reduce_trans_rot()
@@ -607,7 +612,13 @@ def main():
             logger.info("Skipping reduction of translational and rotational modes as per user request.")
 
         projector = Projector(ref=ref, output_unit=output_unit, kabsch_threshold=args.kabsch_threshold)
-        nmode_coords = projector.project(snap)
+
+        projections = []
+        for frame_idx, snapshot in trajectory:
+            logger.debug(f"Processing frame {frame_idx + 1}/{len(trajectory)}...")
+            nmode_coords = projector.project(snapshot)
+            projections.append((frame_idx, nmode_coords))
+            logger.debug(f"Frame {frame_idx} projection complete.")
 
         if args.output_csv_name is not None:
             if args.output_csv_name.is_absolute() or len(args.output_csv_name.parts) > 1:
@@ -617,7 +628,7 @@ def main():
                 csv_path = csv_dir.joinpath(args.output_csv_name.name)
             csv_path.parent.mkdir(parents=True, exist_ok=True)
 
-            projector.to_csv(csv_path=csv_path, nmode_coords=nmode_coords, align=args.align_csv)
+            projector.to_csv(csv_path=csv_path, projections=projections, align=args.align_csv)
 
     except Exception:
         logger.exception("An unexpected error occurred")
