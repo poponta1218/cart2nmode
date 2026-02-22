@@ -157,7 +157,16 @@ class XYZParser(BaseTrajectoryParser):
 
                 line = line.strip()
                 if not line:
-                    continue
+                    while True:
+                        pos = f.tell()
+                        next_line = f.readline()
+                        if not next_line:
+                            return
+                        if next_line.strip():
+                            f.seek(pos)
+                            emsg = "Invalid XYZ format. Expected number of atoms, got blank line."
+                            logger.error(emsg)
+                            raise ValueError(emsg)
 
                 try:
                     num_atoms = int(line)
