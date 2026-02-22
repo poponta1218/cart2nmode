@@ -1,11 +1,134 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
+from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
+from typing import cast
 
 import numpy as np
+from cclib.io.ccio import ccread
 
 logger = getLogger(__name__)
+
+
+@dataclass
+class ReferenceData:
+    """
+    Data class to hold reference information extracted from the reference file (e.g., `.fchk`).
+    """
+
+    atomnos: np.ndarray
+    masses: np.ndarray
+    coords: np.ndarray
+    hessian: np.ndarray
+
+
+class BaseReferenceParser(ABC):
+    """
+    Base class for reference file parsers.
+    """
+
+    def __init__(self, file_path: Path):
+        """
+        Initializes a BaseReferenceParser object.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the reference file to be parsed.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the reference file is not found at the specified path.
+        """
+        if not file_path.exists():
+            emsg = f"Reference file not found: {file_path}"
+            logger.error(emsg)
+            raise FileNotFoundError(emsg)
+
+        self.file_path: Path = file_path
+
+    @abstractmethod
+    def parse(self) -> ReferenceData:
+        """
+        Parses the reference file and extracts necessary data for normal mode analysis.
+
+        Returns
+        -------
+        ReferenceData
+            A ReferenceData object containing atom numbers, masses, coordinates, vibrational frequencies, and displacements.
+        """  # noqa: E501
+
+
+class CclibReferenceParser(BaseReferenceParser):
+    """
+    Parser for reference files using cclib (e.g., `.fchk`).
+    """
+
+    def parse(self) -> ReferenceData:
+        """
+        Parses the reference file using cclib and extracts necessary data for normal mode analysis.
+
+        Returns
+        -------
+        ReferenceData
+            A ReferenceData object containing atom numbers, masses, coordinates, vibrational frequencies, and displacements.
+
+        Raises
+        ------
+        ValueError
+            If the reference file cannot be parsed or does not contain the required data.
+        """  # noqa: E501
+        logger.debug(f"Parsing reference file with cclib: {self.file_path}")
+
+        data = ccread(str(self.file_path))
+
+        if data is None:
+            emsg = f"Failed to parse the reference molecule file: {self.file_path}"
+            logger.error(emsg)
+            raise ValueError(emsg)
+
+        required_attrs = ["atomnos", "atommasses", "atomcoords", "hessian"]
+        for attr in required_attrs:
+            if not hasattr(data, attr):
+                emsg = f"Missing required attribute '{attr}' in the reference molecule file: {self.file_path}"
+                logger.error(emsg)
+                raise ValueError(emsg)
+
+        atomnos = cast("np.ndarray", getattr(data, "atomnos"))  # noqa: B009
+        atommasses = cast("np.ndarray", getattr(data, "atommasses"))  # noqa: B009
+        atomcoords = cast("np.ndarray", getattr(data, "atomcoords"))  # noqa: B009
+        hessian = cast("np.ndarray", getattr(data, "hessian"))  # noqa: B009
+
+        return ReferenceData(
+            atomnos=atomnos,
+            masses=atommasses,
+            coords=atomcoords[-1],
+            hessian=hessian,
+        )
+
+
+class FChkReferenceParser(BaseReferenceParser):
+    def parse(self) -> ReferenceData:
+        """
+        Parses the reference file using a manual parser for `.fchk` files and extracts necessary data for normal mode analysis.
+
+        Returns
+        -------
+        ReferenceData
+            A ReferenceData object containing atom numbers, masses, coordinates, vibrational frequencies, and displacements.
+
+        Raises
+        ------
+        ValueError
+            If the reference file cannot be parsed or does not contain the required data.
+        """  # noqa: E501
+        logger.debug(f"Parsing reference file with manual FChk parser: {self.file_path}")
+
+        emsg = f"Manual FChk parser is not implemented yet for file: {self.file_path}"
+        logger.error(emsg)
+        raise NotImplementedError(emsg)
 
 
 class BaseTrajectoryParser(ABC):
@@ -193,6 +316,37 @@ class XYZParser(BaseTrajectoryParser):
                         raise ValueError(emsg) from e
 
                 yield coords
+
+
+def get_reference_parser(file_path: Path) -> BaseReferenceParser:
+    """
+    Returns a reference parser object based on the file extension.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to the reference file to be parsed.
+
+    Returns
+    -------
+    BaseReferenceParser
+        A reference parser object that can be used to parse the reference file.
+
+    Raises
+    ------
+    ValueError
+        If the file extension is not supported.
+    """
+    ext = file_path.suffix.lower()
+    logger.debug(f"Getting reference parser for file: {file_path} with extension: {ext}")
+
+    match ext:
+        case ".fchk" | ".log" | ".out":
+            return CclibReferenceParser(file_path)
+        case _:
+            emsg = f"Unsupported file format: {file_path.suffix}"
+            logger.error(emsg)
+            raise ValueError(emsg)
 
 
 def get_trajectory_parser(file_path: Path) -> BaseTrajectoryParser:
