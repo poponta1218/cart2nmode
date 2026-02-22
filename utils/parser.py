@@ -41,10 +41,10 @@ class BaseTrajectoryParser(ABC):
         Iterate over the trajectory data.
 
         Yields
-        -------
+        ------
         np.ndarray
-            A 3D NumPy array containing the coordinates of each atom in the current frame.
-        """
+            A 2D NumPy array of shape ``(natoms, 3)`` containing the x, y, and z coordinates of each atom in the current frame.
+        """  # noqa: E501
 
 
 class XYZParser(BaseTrajectoryParser):
@@ -94,8 +94,9 @@ class XYZParser(BaseTrajectoryParser):
         with self.file_path.open(mode="r", encoding="utf-8") as f:
             first_line = f.readline().strip()
             if not first_line:
-                self._num_frames = 0
-                return self._num_frames
+                emsg = f"Empty or blank XYZ file: {self.file_path}"
+                logger.error(emsg)
+                raise ValueError(emsg)
 
             try:
                 natoms = int(first_line)
@@ -124,10 +125,14 @@ class XYZParser(BaseTrajectoryParser):
         logger.debug(f"Found {self._num_frames} frames in total.")
 
         if self._num_frames == 0:
-            raise ValueError(self.file_path, "No frames found in XYZ file")
+            emsg = f"No frames found in XYZ file: {self.file_path}"
+            logger.error(emsg)
+            raise ValueError(emsg)
 
         if self._num_frames is None:
-            raise ValueError(self.file_path, "Could not determine number of frames in XYZ file")
+            emsg = f"Could not determine number of frames in XYZ file: {self.file_path}"
+            logger.error(emsg)
+            raise ValueError(emsg)
 
         return self._num_frames
 
