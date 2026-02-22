@@ -348,7 +348,7 @@ class Projector:
         logger.debug("Projection complete.")
         return nmode_coords_q.to(self.output_unit)
 
-    def to_csv(self, csv_path: Path, all_rslts: list[tuple[int, PlainQuantity[Any]]], *, align: bool) -> None:
+    def to_csv(self, csv_path: Path, projections: list[tuple[int, PlainQuantity[Any]]], *, align: bool) -> None:
         """
         Saves projected normal mode coordinates to a CSV file.
 
@@ -356,7 +356,7 @@ class Projector:
         ----------
         csv_path : Path
             Path to the output CSV file.
-        all_rslts : list[tuple[int, PlainQuantity[Any]]]
+        projections : list[tuple[int, PlainQuantity[Any]]]
             List of tuples containing frame indices and projected normal mode coordinates.
         align : bool, optional
             Aligns the columns in the output CSV by padding with spaces, by default False.
@@ -368,8 +368,8 @@ class Projector:
             logger.error(emsg)
             raise ValueError(emsg)
 
-        if not all_rslts:
-            emsg = "No projection results to save. The 'all_rslts' list is empty."
+        if not projections:
+            emsg = "No projection results to save. The 'projections' list is empty."
             logger.warning(emsg)
             return
 
@@ -386,7 +386,7 @@ class Projector:
                 mode_idx += n_skipped + 1
 
         rows = []
-        for frame_idx, nmode_coords in all_rslts:
+        for frame_idx, nmode_coords in projections:
             row_data = {
                 "frame": frame_idx,
             }
@@ -395,7 +395,7 @@ class Projector:
             rows.append(row_data)
 
         df = pl.DataFrame(rows)
-        frame_fmt_width = len(str(len(all_rslts) - 1))
+        frame_fmt_width = len(str(len(projections) - 1))
 
         logger.debug(f"Dataframe created with {len(df)} rows.")
         logger.debug(f"Aligning columns in the output CSV: {align}.")
@@ -589,11 +589,11 @@ def main():
 
         projector = Projector(ref=ref, output_unit=output_unit, kabsch_threshold=args.kabsch_threshold)
 
-        all_rslts = []
+        projections = []
         for frame_idx, snapshot in trajectory:
             logger.debug(f"Processing frame {frame_idx + 1}/{len(trajectory)}...")
             nmode_coords = projector.project(snapshot)
-            all_rslts.append((frame_idx, nmode_coords))
+            projections.append((frame_idx, nmode_coords))
             logger.debug(f"Frame {frame_idx} projection complete.")
 
         if args.output_csv_name is not None:
@@ -604,7 +604,7 @@ def main():
                 csv_path = csv_dir.joinpath(args.output_csv_name.name)
             csv_path.parent.mkdir(parents=True, exist_ok=True)
 
-            projector.to_csv(csv_path=csv_path, all_rslts=all_rslts, align=args.align_csv)
+            projector.to_csv(csv_path=csv_path, projections=projections, align=args.align_csv)
 
     except Exception:
         logger.exception("An unexpected error occurred")
