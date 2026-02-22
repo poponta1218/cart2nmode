@@ -1,11 +1,12 @@
 # cart2nmode
 
-A robust Python utility for projecting the Cartesian coordinates of a molecular snapshot (e.g., from MD trajectories or optimization steps) onto the vibrational normal modes of a reference structure.
+A robust Python utility for projecting the Cartesian coordinates of molecular snapshots (e.g., from MD trajectories or scans) onto the vibrational normal modes of a reference structure.
 
 This tool performs Mass-Weighted Normal Mode Analysis, automatically handling translational/rotational (TR) mode removal and structural alignment via the Kabsch algorithm.
 
 ## Features
 
+* **Multi-frame Trajectory Support**: Processes entire trajectory files (e.g., `.xyz`) instead of single snapshots.
 * **Robust Unit Handling**: Powered by Pint, allowing seamless conversion between Angstrom, Bohr, and other length units.
 * **Structural Alignment**: Automatically aligns the snapshot to the reference using the Kabsch algorithm to minimize RMSD before projection.
 * **TR Mode Reduction**: Automatically identifies and removes translational and rotational modes from the reference Hessian.
@@ -20,12 +21,14 @@ This tool performs Mass-Weighted Normal Mode Analysis, automatically handling tr
 │   ├── csv/              # Default output directory for CSV results
 │   └── ...               # Example inputs (XYZ, FChk, etc.)
 ├── log/                  # Execution logs (timestamped)
+├── utils/                # Utility functions and modules
+│   ├── __init__.py       # Utility module initialization
+│   └── parser.py         # Trajectory file parsers (e.g., XYZParser)
 ├── main.py               # Entry point
 ├── pyproject.toml        # Project configuration (uv)
 ├── uv.lock               # Lock file
 ├── requirements.txt      # Dependency file (synced with uv)
 └── README.md             # This file
-
 ```
 
 ## Installation
@@ -92,16 +95,15 @@ The output CSV will be saved in `data/csv/` (unless an absolute path is provided
 
 **Columns:**
 
-* `mode`: Mode index (0 corresponds to the imaginary mode if present, or the lowest real mode after TR removal).
-* `frequency`: Vibrational frequency in $`\mathrm{cm}^{-1}`$.
-* `displacement`: The projection coefficient of the normal mode $`Q_i`$ in units of $`(\mathrm{amu})^{1/2} a_0`$ (by default).
+* `frame`: Frame index from the snapshot trajectory (0-based index).
+* `mode_i`: The projection coefficient of the normal mode $`Q_i`$ in units of $`(\mathrm{amu})^{1/2} a_0`$ (by default).
 
 Example content:
 
 ```csv
-mode,frequency,displacement
-  0,  -1234.56,   1.2345E-01
-  7,    100.23,  -4.5678E-03
+frame,       mode_0,       mode_7,       mode_8
+    0,   1.2345E-01,  -4.5678E-03,   8.9012E-02
+    1,   1.2400E-01,  -4.5000E-03,   8.9500E-02
 ...
 ```
 
