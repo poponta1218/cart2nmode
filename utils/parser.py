@@ -219,38 +219,20 @@ class XYZParser(BaseTrajectoryParser):
 
         logger.debug(f"Calculating number of frames in XYZ file: {self.file_path}")
 
-        with self.file_path.open(mode="r", encoding="utf-8") as f:
-            first_line = f.readline().strip()
-            if not first_line:
-                emsg = f"Empty or blank XYZ file: {self.file_path}"
-                logger.error(emsg)
-                raise ValueError(emsg)
-
-            try:
-                natoms = int(first_line)
-            except ValueError as e:
-                emsg = f"Invalid atom count in XYZ file {self.file_path}. Expected number of atoms, got: {first_line}"
-                logger.exception(emsg)
-                raise ValueError(emsg) from e
-
-        lines_per_frame = natoms + 2
-
-        total_lines = 0
-        with self.file_path.open(mode="rb") as f:
-            for chunk in iter(lambda: f.read(1024 * 1024), b""):
-                total_lines += chunk.count(b"\n")
-
-        remainder = total_lines % lines_per_frame
-        if remainder != 0:
-            emsg = (
-                f"Malformed XYZ file {self.file_path}. Total lines: {total_lines} "
-                f"is not a multiple of lines per frame: {lines_per_frame}."
+        num_frames = self._count_frames_fast()
+        if num_frames is not None:
+            logger.debug(f"Fast path successful. Found {num_frames} frames in total.")
+            self._num_frames = num_frames
+        else:
+            msg = (
+                f"Fast path failed for XYZ file: {self.file_path} "
+                "This may be due to blank lines or malformed frames in the file. "
+                "Falling back to line-by-line counting. This may take some time for large files."
             )
-            logger.error(emsg)
-            raise ValueError(emsg)
+            logger.debug(msg)
 
-        self._num_frames = total_lines // lines_per_frame
-        logger.debug(f"Found {self._num_frames} frames in total.")
+            self._num_frames = self._count_frames_safe()
+            logger.debug(f"Safe parsing successful. Found exactly {self._num_frames} frames.")
 
         if self._num_frames == 0:
             emsg = f"No frames found in XYZ file: {self.file_path}"
@@ -280,16 +262,7 @@ class XYZParser(BaseTrajectoryParser):
 
                 line = line.strip()
                 if not line:
-                    while True:
-                        pos = f.tell()
-                        next_line = f.readline()
-                        if not next_line:
-                            return
-                        if next_line.strip():
-                            f.seek(pos)
-                            emsg = "Invalid XYZ format. Expected number of atoms, got blank line."
-                            logger.error(emsg)
-                            raise ValueError(emsg)
+                    continue
 
                 try:
                     num_atoms = int(line)
@@ -316,6 +289,82 @@ class XYZParser(BaseTrajectoryParser):
                         raise ValueError(emsg) from e
 
                 yield coords
+
+    def _count_frames_fast(self) -> int | None:
+        """
+        Counts the number of frames in the XYZ file using a fast method that counts newline characters.
+
+        Returns
+        -------
+        int | None
+            The number of frames in the XYZ file.
+            Returns None if the number of frames cannot be determined due to blank lines or malformed frames.
+
+        Raises
+        ------
+        ValueError
+            If the number of frames cannot be determined or is zero.
+        """
+        with self.file_path.open(mode="r", encoding="utf-8") as f:
+            first_line = f.readline().strip()
+            if not first_line:
+                return None
+
+            try:
+                natoms = int(first_line)
+            except ValueError:
+                return None
+
+        lines_per_frame = natoms + 2
+
+        total_lines = 0
+        with self.file_path.open(mode="rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                total_lines += chunk.count(b"\n")
+
+        if total_lines > 0 and total_lines % lines_per_frame == 0:
+            return total_lines // lines_per_frame
+
+        return None
+
+    def _count_frames_safe(self) -> int:
+        """
+        Counts the number of frames in the XYZ file using a safe method that reads each frame and counts them.
+
+        Returns
+        -------
+        int
+            The number of frames in the XYZ file.
+
+        Raises
+        ------
+        ValueError
+            If invalid atom counts are encounterd during parsing.
+        """
+        frames = 0
+        with self.file_path.open(mode="r", encoding="utf-8") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+
+                line = line.strip()
+                if not line:
+                    continue
+
+                try:
+                    current_natoms = int(line)
+                except ValueError as e:
+                    emsg = f"Invalid atom count at frame {frames} in {self.file_path}. Got: '{line}'"
+                    logger.exception(emsg)
+                    raise ValueError(emsg) from e
+
+                frames += 1
+
+                for _ in range(current_natoms + 1):
+                    f.readline()
+
+        return frames
 
 
 def get_reference_parser(file_path: Path) -> BaseReferenceParser:
