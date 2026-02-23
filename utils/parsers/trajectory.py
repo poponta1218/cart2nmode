@@ -212,3 +212,93 @@ class XYZTrajectoryParser(BaseTrajectoryParser):
                     f.readline()
 
         return frames
+
+
+@register_trajectory(priority=30)
+class GRRMLogTrajectoryParser(BaseTrajectoryParser):
+    """
+    Parser for GRRM log trajectory files.
+    """
+
+    @classmethod
+    def is_applicable(cls, file_path: Path) -> bool:
+        """
+        Determines if this parser is applicable to the given file path.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the trajectory file to be checked.
+
+        Returns
+        -------
+        bool
+            True if this parser can handle the given file, False otherwise.
+        """
+        if file_path.suffix.lower() not in (".log", ".out"):
+            return False
+
+        with file_path.open(mode="r", encoding="utf-8") as f:
+            for _ in range(50):
+                line = f.readline()
+                if "GRRM" in line or "Global Reaction Route Mapping" in line:
+                    return True
+        return False
+
+    def parse(self) -> Iterator[np.ndarray]:
+        """
+        Parses a GRRM log trajectory file and yields each frame as a 2D NumPy array with shape (natoms, 3),
+        where each row represents the coordinates of an atom in the frame.
+
+        Raises
+        ------
+        NotImplementedError
+            GRRM log trajectory parsing is not yet implemented.
+        """
+        emsg = "GRRMLogTrajectoryParser.parse is not yet implemented yet."
+        raise NotImplementedError(emsg)
+
+
+@register_trajectory(priority=35)
+class GaussianLogTrajectoryParser(BaseTrajectoryParser):
+    """
+    Parser for Gaussian log trajectory files.
+    """
+
+    @classmethod
+    def is_applicable(cls, file_path: Path) -> bool:
+        """
+        Determines if this parser is applicable to the given file path.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the trajectory file to be checked.
+
+        Returns
+        -------
+        bool
+            True if this parser can handle the given file, False otherwise.
+        """
+        if file_path.suffix.lower() not in (".log", ".out"):
+            return False
+
+        with file_path.open(mode="r", encoding="utf-8") as f:
+            for _ in range(50):
+                line = f.readline()
+                if "Gaussian" in line or "Gaussian, Inc." in line:
+                    return True
+        return False
+
+    def parse(self) -> Iterator[np.ndarray]:
+        """
+        Parses a Gaussian log trajectory file and yields each frame as a 2D NumPy array with shape (natoms, 3),
+        where each row represents the coordinates of an atom in the frame.
+
+        Raises
+        ------
+        NotImplementedError
+            Gaussian log trajectory parsing is not yet implemented.
+        """
+        emsg = "GaussianLogTrajectoryParser.parse is not yet implemented yet."
+        raise NotImplementedError(emsg)

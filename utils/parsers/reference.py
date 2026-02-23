@@ -153,7 +153,105 @@ class FChkReferenceParser(BaseReferenceParser):
         return np.array(data, dtype=dtype)
 
 
-@register_reference(priority=20)
+@register_reference(priority=30)
+class GRRMLogReferenceParser(BaseReferenceParser):
+    """
+    Parser for GRRM log reference files.
+    """
+
+    @classmethod
+    def is_applicable(cls, file_path: Path) -> bool:
+        """
+        Determines if this parser is applicable to the given file path.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the trajectory file to be checked.
+
+        Returns
+        -------
+        bool
+            True if this parser can handle the given file, False otherwise.
+        """
+        if file_path.suffix.lower() not in (".log", ".out"):
+            return False
+
+        with file_path.open(mode="r", encoding="utf-8") as f:
+            for _ in range(50):
+                line = f.readline()
+                if "GRRM" in line or "Global Reaction Route Mapping" in line:
+                    return True
+        return False
+
+    def parse(self) -> ReferenceData:
+        """
+        Parses a GRRM log reference file and returns the reference data.
+
+        Returns
+        -------
+        ReferenceData
+            The parsed reference data.
+
+        Raises
+        ------
+        NotImplementedError
+            GRRM log reference parsing is not yet implemented.
+        """
+        emsg = "GRRMLogReferenceParser.parse is not yet implemented yet."
+        raise NotImplementedError(emsg)
+
+
+@register_reference(priority=35)
+class GaussianLogReferenceParser(BaseReferenceParser):
+    """
+    Parser for Gaussian log reference files.
+    """
+
+    @classmethod
+    def is_applicable(cls, file_path: Path) -> bool:
+        """
+        Determines if this parser is applicable to the given file path.
+
+        Parameters
+        ----------
+        file_path : Path
+            Path to the trajectory file to be checked.
+
+        Returns
+        -------
+        bool
+            True if this parser can handle the given file, False otherwise.
+        """
+        if file_path.suffix.lower() not in (".log", ".out"):
+            return False
+
+        with file_path.open(mode="r", encoding="utf-8") as f:
+            for _ in range(50):
+                line = f.readline()
+                if "Gaussian" in line or "Gaussian, Inc." in line:
+                    return True
+        return False
+
+    def parse(self) -> ReferenceData:
+        """
+        Parses a Gaussian log reference file and returns the reference data.
+
+        Returns
+        -------
+        ReferenceData
+            The parsed reference data.
+
+        Raises
+        ------
+        NotImplementedError
+            Gaussian log reference parsing is not yet implemented.
+        """
+        emsg = "GaussianLogReferenceParser.parse is not yet implemented yet."
+        raise NotImplementedError(emsg)
+
+
+@register_reference(priority=100)
 class CclibReferenceParser(BaseReferenceParser):
     """
     Parser for reference files using cclib (e.g., `.fchk`).
