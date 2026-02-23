@@ -245,7 +245,7 @@ class GRRMLogTrajectoryParser(BaseTrajectoryParser):
                     return True
         return False
 
-    def parse(self) -> Iterator[np.ndarray]:
+    def __iter__(self) -> Iterator[np.ndarray]:
         """
         Parses a GRRM log trajectory file and yields each frame as a 2D NumPy array with shape (natoms, 3),
         where each row represents the coordinates of an atom in the frame.
@@ -255,7 +255,7 @@ class GRRMLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             GRRM log trajectory parsing is not yet implemented.
         """
-        emsg = "GRRMLogTrajectoryParser.parse is not yet implemented yet."
+        emsg = "GRRMLogTrajectoryParser.__iter__ is not yet implemented yet."
         raise NotImplementedError(emsg)
 
 
@@ -290,7 +290,7 @@ class GaussianLogTrajectoryParser(BaseTrajectoryParser):
                     return True
         return False
 
-    def parse(self) -> Iterator[np.ndarray]:
+    def __iter__(self) -> Iterator[np.ndarray]:
         """
         Parses a Gaussian log trajectory file and yields each frame as a 2D NumPy array with shape (natoms, 3),
         where each row represents the coordinates of an atom in the frame.
@@ -300,5 +300,5 @@ class GaussianLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             Gaussian log trajectory parsing is not yet implemented.
         """
-        emsg = "GaussianLogTrajectoryParser.parse is not yet implemented yet."
+        emsg = "GaussianLogTrajectoryParser.__iter__ is not yet implemented yet."
         raise NotImplementedError(emsg)
