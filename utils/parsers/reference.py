@@ -198,7 +198,7 @@ class GRRMLogReferenceParser(BaseReferenceParser):
         NotImplementedError
             GRRM log reference parsing is not yet implemented.
         """
-        emsg = "GRRMLogReferenceParser.parse is not yet implemented yet."
+        emsg = "GRRMLogReferenceParser.parse is not implemented yet."
         raise NotImplementedError(emsg)
 
 
@@ -247,7 +247,7 @@ class GaussianLogReferenceParser(BaseReferenceParser):
         NotImplementedError
             Gaussian log reference parsing is not yet implemented.
         """
-        emsg = "GaussianLogReferenceParser.parse is not yet implemented yet."
+        emsg = "GaussianLogReferenceParser.parse is not implemented yet."
         raise NotImplementedError(emsg)
 
 

@@ -254,7 +254,7 @@ class GRRMLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             GRRM log trajectory parsing is not yet implemented.
         """
-        emsg = "GRRMLogTrajectoryParser.__len__ is not yet implemented yet."
+        emsg = "GRRMLogTrajectoryParser.__len__ is not implemented yet."
         raise NotImplementedError(emsg)
 
     def __iter__(self) -> Iterator[np.ndarray]:
@@ -267,7 +267,7 @@ class GRRMLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             GRRM log trajectory parsing is not yet implemented.
         """
-        emsg = "GRRMLogTrajectoryParser.__iter__ is not yet implemented yet."
+        emsg = "GRRMLogTrajectoryParser.__iter__ is not implemented yet."
         raise NotImplementedError(emsg)
 
 
@@ -311,7 +311,7 @@ class GaussianLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             Gaussian log trajectory parsing is not yet implemented.
         """
-        emsg = "GaussianLogTrajectoryParser.__len__ is not yet implemented yet."
+        emsg = "GaussianLogTrajectoryParser.__len__ is not implemented yet."
         raise NotImplementedError(emsg)
 
     def __iter__(self) -> Iterator[np.ndarray]:
@@ -324,5 +324,5 @@ class GaussianLogTrajectoryParser(BaseTrajectoryParser):
         NotImplementedError
             Gaussian log trajectory parsing is not yet implemented.
         """
-        emsg = "GaussianLogTrajectoryParser.__iter__ is not yet implemented yet."
+        emsg = "GaussianLogTrajectoryParser.__iter__ is not implemented yet."
         raise NotImplementedError(emsg)
