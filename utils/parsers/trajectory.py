@@ -245,6 +245,18 @@ class GRRMLogTrajectoryParser(BaseTrajectoryParser):
                     return True
         return False
 
+    def __len__(self) -> int:
+        """
+        Returns the number of frames in the GRRM log trajectory file.
+
+        Raises
+        ------
+        NotImplementedError
+            GRRM log trajectory parsing is not yet implemented.
+        """
+        emsg = "GRRMLogTrajectoryParser.__len__ is not yet implemented yet."
+        raise NotImplementedError(emsg)
+
     def __iter__(self) -> Iterator[np.ndarray]:
         """
         Parses a GRRM log trajectory file and yields each frame as a 2D NumPy array with shape (natoms, 3),
@@ -289,6 +301,18 @@ class GaussianLogTrajectoryParser(BaseTrajectoryParser):
                 if "Gaussian" in line or "Gaussian, Inc." in line:
                     return True
         return False
+
+    def __len__(self) -> int:
+        """
+        Returns the number of frames in the Gaussian log trajectory file.
+
+        Raises
+        ------
+        NotImplementedError
+            Gaussian log trajectory parsing is not yet implemented.
+        """
+        emsg = "GaussianLogTrajectoryParser.__len__ is not yet implemented yet."
+        raise NotImplementedError(emsg)
 
     def __iter__(self) -> Iterator[np.ndarray]:
         """
