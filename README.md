@@ -7,6 +7,7 @@ This tool performs Mass-Weighted Normal Mode Analysis, automatically handling tr
 ## Features
 
 * **Multi-frame Trajectory Support**: Processes entire trajectory files (e.g., `.xyz`) instead of single snapshots.
+* **Projected Frequencies**: Rigorously projects out translation, rotation, and gradient (TRG) directions from the Hessian to obtain pure vibrational modes at non-stationary points.
 * **Robust Unit Handling**: Powered by Pint, allowing seamless conversion between Angstrom, Bohr, and other length units.
 * **Structural Alignment**: Automatically aligns the snapshot to the reference using the Kabsch algorithm to minimize RMSD before projection.
 * **TR Mode Reduction**: Automatically identifies and removes translational and rotational modes from the reference Hessian.
@@ -85,6 +86,7 @@ uv run main.py \
 | **Reference** | `-r`, `--reference` | Path | **Required** | Path to the reference file (e.g., `.fchk`). Must contain Hessian/Frequency data. |
 | **Snapshot** | `-s`, `--snapshot` | Path | **Required** | Path to the snapshot file (e.g., `.xyz`). |
 | **Output Name** | `-o`, `--output-csv-name` | Path | `<snapshot_name>-nmode.csv` | Filename for the output CSV. By default, it saves to `data/csv/` using the snapshot's base name appended with `-nmode`. It also respects absolute paths if provided. |
+| **Projected** | `-p`, `--projected` | Bool | `False` | Enable projection of Translation, Rotation, and Gradient (TRG) modes from the Hessian before diagonalization. |
 | **Input Unit** | `-u`, `--input-unit` | Str | `angstrom` | Unit of coordinates in the snapshot file (e.g., `angstrom`, `bohr`). |
 | **Output Unit** | `-U`, `--output-unit` | Str | `bohr` | Unit for the projected coordinates (sqrt(amu) * Unit). |
 | **Align CSV** | `-a`, `--align-csv` | Bool | `True` | Format CSV columns with padding for readability. Use `--no-align-csv` to disable. |
