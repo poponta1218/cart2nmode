@@ -22,8 +22,11 @@ This tool performs Mass-Weighted Normal Mode Analysis, automatically handling tr
 │   └── ...               # Example inputs (XYZ, FChk, etc.)
 ├── log/                  # Execution logs (timestamped)
 ├── utils/                # Utility functions and modules
-│   ├── __init__.py       # Utility module initialization
-│   └── parser.py         # Trajectory file parsers (e.g., XYZParser)
+│   └── parsers/          # Trajectory and reference file parsers
+│       ├── __init__.py   # Parser package initialization
+│       ├── core.py       # Core parsing logic and base classes
+│       ├── reference.py  # Reference file parsers (e.g., FChkParser)
+│       └── trajectory.py # Trajectory file parsers (e.g., XYZParser)
 ├── main.py               # Entry point
 ├── pyproject.toml        # Project configuration (uv)
 ├── uv.lock               # Lock file
