@@ -10,8 +10,40 @@ TRAJECTORY_PARSERS: list[tuple[int, type]] = []
 
 
 def register_reference(priority: int = 100) -> Callable:
+    """
+    Registers a reference parser class with a given priority.
+
+    The priority is used to determine which parser to use when parsing a reference file.
+    A higher priority means that the parser will be tried first.
+
+    Parameters
+    ----------
+    priority : int, optional
+        The priority of the parser, by default 100.
+
+    Returns
+    -------
+    Callable
+        A decorator that registers the parser class with the given priority.
+    """
 
     def decorator(cls: type) -> type:
+        """
+        A decorator that registers a reference parser class with the given priority.
+
+        The given class is appended to the REFERENCE_PARSERS list with the given priority.
+        The list is then sorted by the priority to ensure that the parsers are tried in the correct order.
+
+        Parameters
+        ----------
+        cls : type
+            The reference parser class to register.
+
+        Returns
+        -------
+        type
+            The registered reference parser class.
+        """
         REFERENCE_PARSERS.append((priority, cls))
         REFERENCE_PARSERS.sort(key=lambda x: x[0])
         return cls
@@ -20,8 +52,40 @@ def register_reference(priority: int = 100) -> Callable:
 
 
 def register_trajectory(priority: int = 100) -> Callable:
+    """
+    Registers a trajectory parser class with a given priority.
+
+    The priority is used to determine which parser to use when parsing a trajectory file.
+    A higher priority means that the parser will be tried first.
+
+    Parameters
+    ----------
+    priority : int, optional
+        The priority of the parser, by default 100.
+
+    Returns
+    -------
+    Callable
+        A decorator that registers the parser class with the given priority.
+    """
 
     def decorator(cls: type) -> type:
+        """
+        A decorator that registers a trajectory parser class with the given priority.
+
+        The given class is appended to the TRAJECTORY_PARSERS list with the given priority.
+        The list is then sorted by the priority to ensure that the parsers are tried in the correct order.
+
+        Parameters
+        ----------
+        cls : type
+            The trajectory parser class to register.
+
+        Returns
+        -------
+        type
+            The registered trajectory parser class.
+        """
         TRAJECTORY_PARSERS.append((priority, cls))
         TRAJECTORY_PARSERS.sort(key=lambda x: x[0])
         return cls
